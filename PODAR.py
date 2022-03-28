@@ -271,7 +271,7 @@ def get_risk_to_obj(ego: Veh_obj, obj: Veh_obj, step_interval: float = 0.1):
 
     cof = 1 / 50.  # used to scale the risk
     v_ = delta_v * 0.7 + abs_v * 0.3
-    damage = 0.5 * (ego.mass + ego.sensitive + obj.mass * obj.sensitive) * v_ * np.abs(v_) * cof  # 0.5*m*v^2
+    damage = 0.5 * (ego.mass * ego.sensitive + obj.mass * obj.sensitive) * v_ * np.abs(v_) * cof  # 0.5*m*v^2
 
     ii = int(ego.v_pred[0] / abs(ego.max_dece) / (3 / t_step))
     weight_t = np.zeros(t_step + 1) + 1

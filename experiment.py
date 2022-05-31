@@ -308,6 +308,14 @@ def plot_sta(obj, risk_all, id_, color, risk, offset=0, label=False):
 
 
 if __name__ == '__main__':
-    comparison_measures()
+    # comparison_measures()
     # car_following()
+
+    vehicles_1 = Vehicles()
+    vehicles_1.set_ego(type='car', x0=0., y0=0., speed=3.5, phi0=1.57)
+
+    vehicles_1.add_obj(type='car', x0=0, y0=10.5, speed=5, phi0=1.57)
+    vehicles_1.add_obj(type='car', x0=3.5, y0=0., speed=4, phi0=1.57)
+
+    print(vehicles_1.estimate_risk())
     

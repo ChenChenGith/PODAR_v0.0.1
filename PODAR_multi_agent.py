@@ -3,7 +3,7 @@
 # =====================================
 # @Time    : 2021/11/12
 # @Author  : Chen Chen (Tsinghua Univ.)
-# @FileName: PCD_Risk_Module.py
+# @FileName: PODAR_multi_agent.py
 # =====================================
 
 from dataclasses import dataclass, field
@@ -46,7 +46,12 @@ class Veh_obj:
     risk: List[float] = field(default_factory=list)  # final determined risk values, scalar
     collided: List[bool] = field(default_factory=list)  # if will be a collision in predicted horizon
     rc: List[bool] = field(default_factory=list)  # if a collision occurs at current (real collision)
+    max_risk_step: int = None  # index in prediction horizon for the max risk
     
+    # results of risk assessment for ego vehicle to each obj. useful only for ego vehicle
+    risk2obj: Dict[str, list] = field(default_factory=dict)
+    collided2obj: Dict[str, list] = field(default_factory=dict)
+    rc2obj: Dict[str, list] = field(default_factory=dict)
     
     def __post_init__(self):
         """set default parameters
@@ -81,11 +86,21 @@ class Veh_obj:
             exec("self.{0}=val".format(key), {'self': self, 'val': val})
 
     def update_risk(self, **kwargs):
+        if 'obj_name' in kwargs.keys():
+            flag = 1 # if save risk2ego dict
+            obj_name = kwargs['obj_name']
+            del kwargs['obj_name']
+        else: 
+            flag = 0
         for key, val in kwargs.items():
             exec("self.{0}.append(val)".format(key), {'self': self, 'val': val})
+            if flag == 1: 
+                exec("self.{0}[obj_name] = val".format(key + '2obj'), {'self': self, 'obj_name':obj_name, 'val': val})
     
     def reset(self):
         self.risk.clear()
+        self.collided.clear()
+        self.rc.clear()
         
 
 
@@ -120,11 +135,11 @@ class Vehicles:
         get_future_position_shapely(_o)
         for _name, _list in self.ego_surr_list.items():
             if _o.name in _list:
-                get_risk_to_obj(self.ego[_name], _o)
+                get_risk_to_obj(self.ego[_name], _o, step_interval=self.step_interval)
         self.obj[name] = _o 
 
     def reset(self):
-        self.ego.clear()
+        for _ego in self.ego.values(): _ego.reset()
         self.obj.clear()
         self.ego_surr_list.clear()
     
@@ -275,20 +290,28 @@ def get_risk_to_obj(ego: Veh_obj, obj: Veh_obj, step_interval: float = 0.1):
     
     if min(dis_t) <= 0:  # if there exist a collision in predicted horizon
         if np.min(np.where(dis_t == 0)) != 0:  # if no collision occurs at present
-            ego.update_risk(risk=risk_tmp, collided=1, rc=0)  # predicted collision
+            ego.update_risk(risk=risk_tmp, collided=1, rc=0, max_risk_step=max_risk_step, obj_name=obj.name)  # predicted collision
         else:
-            ego.update_risk(risk=risk_tmp, collided=1, rc=1)  # actual collision
+            ego.update_risk(risk=risk_tmp, collided=1, rc=1, max_risk_step=max_risk_step, obj_name=obj.name)  # actual collision
     else:
-        ego.update_risk(risk=risk_tmp, collided=0, rc=0)  # no collision    
+        ego.update_risk(risk=risk_tmp, collided=0, rc=0, obj_name=obj.name)  # no collision    
 
 
 if __name__ == '__main__':
-    vehicles = Vehicles(ego_surr_list={'s':['2','1'], 'q':['1']})
-    vehicles.add_ego(name='s', type='car', x0=0., y0=0., speed=0 / 3.6, phi0=pi / 2)
-    vehicles.add_ego(name='q', type='car', x0=0., y0=0., speed=0 / 3.6, phi0=pi / 2)
+    # vehicles = Vehicles(ego_surr_list={'s':['2','1'], 'q':['1']})
+    # vehicles.add_ego(name='s', type='car', x0=0., y0=0., speed=0 / 3.6, phi0=pi / 2)
+    # vehicles.add_ego(name='q', type='car', x0=0., y0=0., speed=0 / 3.6, phi0=pi / 2)
 
-    vehicles.add_obj(name='1', type='car', x0=3.5, y0=-25., speed=30 / 3.6, phi0=pi / 2)
-    vehicles.add_obj(name='2', type='car', x0=3.5, y0=-10., speed=30 / 3.6, phi0=pi / 2)
+    # vehicles.add_obj(name='1', type='car', x0=3.5, y0=-25., speed=30 / 3.6, phi0=pi / 2)
+    # vehicles.add_obj(name='2', type='car', x0=3.5, y0=-10., speed=30 / 3.6, phi0=pi / 2)
     
-    res = vehicles.estimate_risk()
-    print(res)
+    # res = vehicles.estimate_risk()
+    # print(res).
+
+    vehicles_1 = Vehicles(ego_surr_list={'s':['2','1']})
+    vehicles_1.add_ego(name='s', type='car', x0=0., y0=0., speed=3.5, phi0=1.57)
+
+    vehicles_1.add_obj(name='1', type='car', x0=0, y0=10.5, speed=5, phi0=1.57)
+    vehicles_1.add_obj(name='2', type='car', x0=3.5, y0=0., speed=4, phi0=1.57)
+
+    print(vehicles_1.estimate_risk())

@@ -274,7 +274,7 @@ def get_risk_to_obj(ego: Veh_obj, obj: Veh_obj, step_interval: float = 0.1):
 
     ii = int(ego.v_pred[0] / abs(ego.max_dece) / (3 / t_step))
     weight_t = np.zeros(t_step + 1) + 1
-    time_de_curve = 10 / (np.linspace(0, 30.0, t_step + 1) - ii + 10)
+    time_de_curve = (1 / step_interval) / (np.linspace(0, 30.0, t_step + 1) - ii + (1 / step_interval))
     weight_t[ii:] = time_de_curve[ii:]  # temporal attenuation curve
     dis_t[dis_t < 0] = 0
     dis_de_curve = 2.5 / (dis_t + 2.5)  # spatial attenuation curve

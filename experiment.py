@@ -91,6 +91,7 @@ def comparison_measures():
     plt.plot([zero_rv_min, zero_rv_min], [-0.4, 0], c='black', linestyle=':')
     plt.plot([zero_rv_max, zero_rv_max], [-0.4, 0], c='black', linestyle=':')
     plt.text(0,0,'1/TTC=0', c=c_cyc[0])
+    plt.ylim([-0.4, 0.6])
 
     ax22 = ax2.twinx()
     ax2ln2 = plt.plot(np.arange(0, ti, 0.1), drac, label='DRAC', c=c_cyc[1])
@@ -99,6 +100,7 @@ def comparison_measures():
     plt.legend(ax2ln1+ax2ln2, ['1/TTC', 'DRAC'])
     plt.text(0,0,'DRAC=0', c=c_cyc[1])
     plt.grid(None)
+    plt.ylim([0.0, 2.5])
 
     ax3 = plt.subplot(grid[1,2])
     plt.plot(np.arange(0, ti, 0.1), sf, label='Safety Field')
@@ -309,7 +311,7 @@ def plot_sta(obj, risk_all, id_, color, risk, offset=0, label=False):
 
 if __name__ == '__main__':
     comparison_measures()
-    car_following()
+    # car_following()
 
     # vehicles_1 = Vehicles()
     # vehicles_1.set_ego(type='car', x0=0., y0=0., speed=3.5, phi0=1.57)

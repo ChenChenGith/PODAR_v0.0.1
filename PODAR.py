@@ -281,7 +281,7 @@ def get_risk_to_obj(ego: Veh_obj, obj: Veh_obj, step_interval: float = 0.1):
     dis_de_curve = 2.5 / (dis_t + 2.5)  # spatial attenuation curve
     risk = damage * (dis_de_curve * weight_t)    
     
-    if np.sum(np.where(risk >= 0)) > 0:  # if the estimated damage values exist at least one positive
+    if np.sum(np.where(risk >= 0)[0] + 1) > 0:  # if the estimated damage values exist at least one positive
         risk_tmp = np.max(risk)  # use the max value
         max_risk_step = int(np.where(risk == risk_tmp)[0].min())  # find the index
     else:  # if all the estimated damage are negative, meanning the obj is moving far away from host vehicle

@@ -127,13 +127,17 @@ class Vehicles:
         get_risk_to_obj(self.ego, _o)
         self.obj.append(_o)
         
-    def update_obj(self, objID, **kwargs):
+    def update_obj(self, objID, **kwargs):  
         """update surr. vehicle
         """
         _o = self.obj[objID]
         for key, val in kwargs.items():
             assert key in vars(_o), '{0} is not a class attr'.format(key)
             exec("_o.{0}={1}".format(key, val))
+        traj_predition(_o, step_interval=self.step_interval)
+        get_future_position_shapely(_o)
+        assert self.ego.type != None, 'Please add a ego vehicle first'
+        get_risk_to_obj(self.ego, _o)
 
     def reset(self):
         self.ego: Veh_obj = field(default_factory=Veh_obj)

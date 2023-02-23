@@ -94,6 +94,13 @@ class Veh_obj:
             assert key in vars(self), '{} is not a class attr'.format(key)
             exec("self.{0}=val".format(key), {'self': self, 'val': val})
 
+    def init_rect(self):
+        '''计算绘图用初始位置矩形参数'''
+        veh_beta = atan2(self.width / 2, self.length / 2)
+        veh_r = np.sqrt(self.width ** 2 + self.length ** 2) / 2
+        self.rect_x = self.x0 - veh_r * cos(self.phi0 + veh_beta)
+        self.rect_y = self.y0 - veh_r * sin(self.phi0 + veh_beta)
+        self.rect_phi = self.phi0 / pi * 180.
 
 @dataclass
 class Vehicles:
@@ -112,6 +119,7 @@ class Vehicles:
             exec("_o.{0}={1}".format(key, val))
         traj_predition(_o, step_interval=self.step_interval)
         get_future_position_shapely(_o, ego_flag=True)
+        _o.init_rect()
         self.ego = _o        
 
     def add_obj(self, type, **kwargs):
@@ -125,6 +133,7 @@ class Vehicles:
         get_future_position_shapely(_o)
         assert self.ego.type != None, 'Please add a ego vehicle first'
         get_risk_to_obj(self.ego, _o)
+        _o.init_rect()
         self.obj.append(_o)
         
     def update_obj(self, objID, **kwargs):  
@@ -164,10 +173,20 @@ class Vehicles:
         rc = True if np.sum(rc_) > 0 else False
         return (risk, collided, rc)
 
+    def get_risk_in_stru(self):
+        _ = []
+        for ov in self.obj:
+            _.append(
+                [self.ego.speed, sqrt(ov.x0 ** 2 + ov.y0 ** 2), ov.type, ov.phi0, ov.phi0 / pi * 180,
+                 ov.x0, ov.y0, ov.speed, ov.speed * 3.6, ov.risk, ov.risk_curve, ov.collided, ov.rc])
+            # columns=['ego_speed', 'r', 'type', 'phi', 'phi_de', 'x', 'y', 'ov_speed', 'ov_speed_km', 'risk', 'risk_curve', 'collided', 'rc']
+        return _
+
+
 
 def traj_predition(veh: Veh_obj, step_interval=0.1):
     """predict the future position and heading angle of an object
-    prediciton horzion is 3 second
+    prediciton horzion is 4 second
 
     Parameters
     ----------
@@ -178,14 +197,14 @@ def traj_predition(veh: Veh_obj, step_interval=0.1):
     """
     x, y, v, phi, a, a_v = veh.x0, veh.y0, veh.speed, veh.phi0, veh.a0, veh.phi_a0
 
-    t_pre = np.linspace(0, 3, int(3 / step_interval + 1))
+    t_pre = np.linspace(0, 4, int(4 / step_interval + 1))
     v_pre = v + a * t_pre  # predict speed
     v_pre[v_pre < 0] = 0  # do not accept reversing when acceleration is negative
     phi_pre = phi + a_v * t_pre  # predict heading angle
     if len(phi_pre[np.where(v_pre == 0)]) != 0:  # fix heading angle when vehicle is stop
         phi_pre[np.where(v_pre == 0)] = phi_pre[np.min(np.where(v_pre == 0)) - 1]
     x_pre, y_pre = [x], [y]  # initial prediction xy
-    for i in range(int(3 / step_interval)):
+    for i in range(int(4 / step_interval)):
         x_pre.append(x_pre[i] + (v_pre[i] * step_interval + 0.5 * a * step_interval ** 2) * cos(phi_pre[i]))
         y_pre.append(y_pre[i] + (v_pre[i] * step_interval + 0.5 * a * step_interval ** 2) * sin(phi_pre[i]))
 
@@ -244,7 +263,7 @@ def get_risk_to_obj(ego: Veh_obj, obj: Veh_obj, step_interval: float = 0.1):
     obj : Veh_obj
     step_interval : float, optional, by default 0.1
     """
-    t_step = int(3. / step_interval)
+    t_step = int(4. / step_interval)
     dis_t = []
     assert len(obj.future_position) > 0, 'Should get future position first'
     for i in range(t_step + 1):  # get the distances in predicted horizon
@@ -275,21 +294,20 @@ def get_risk_to_obj(ego: Veh_obj, obj: Veh_obj, step_interval: float = 0.1):
 
     cof = 1 / 50.  # used to scale the risk
     v_ = delta_v * 0.7 + abs_v * 0.3
-    damage = 0.5 * (ego.mass * ego.sensitive + obj.mass * obj.sensitive) * v_ * np.abs(v_) * cof  # 0.5*m*v^2
+    damage = 0.5 * (ego.mass * ego.sensitive + obj.mass * obj.sensitive) * v_ * np.abs(v_) * cof * 5 # 0.5*m*v^2
 
-    ii = int(ego.v_pred[0] / abs(ego.max_dece) / (3 / t_step))
-    weight_t = np.zeros(t_step + 1) + 1
-    time_de_curve = 10 / (np.linspace(0, 30.0, t_step + 1) - ii + 10)
-    weight_t[ii:] = time_de_curve[ii:]  # temporal attenuation curve
+    time_t = np.linspace(0, 4, 41)
+    time_de_curve = 0.4 / (time_t + 0.4)
+    weight_t = time_de_curve
     dis_t[dis_t < 0] = 0
-    dis_de_curve = 2.5 / (dis_t + 2.5)  # spatial attenuation curve
+    dis_de_curve = 0.25 / (dis_t + 0.25)  # spatial attenuation curve
     risk = damage * (dis_de_curve * weight_t)    
     
     if np.sum(np.where(risk >= 0)[0] + 1) > 0:  # if the estimated damage values exist at least one positive
         risk_tmp = np.max(risk)  # use the max value
         max_risk_step = int(np.where(risk == risk_tmp)[0].min())  # find the index
     else:  # if all the estimated damage are negative, meanning the obj is moving far away from host vehicle
-        risk = damage * (1 + 1 - (dis_de_curve * weight_t))  # deal with the risk values
+        risk = damage * (1 + 1 - (dis_de_curve * weight_t)) * 0.1 # deal with the risk values
         risk_tmp = np.max(risk)  # modified, 20220104
         max_risk_step = int(np.where((risk) == risk_tmp)[0].min())
     

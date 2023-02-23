@@ -1,3 +1,3 @@
-PODAR: a novel model for driving risk evaluation.
+codes for paper: **PODAR: A Universal Model for Driving Risk Estimation**
 
-You can try it by running "experiment.py". There are two examples.
+You can try it by running "cases.ipynb", where includes all the code and picture in the paper.

@@ -192,7 +192,7 @@ def experiment_4():
         pickle.dump((risks, x1, x2, (v, ve, vov), d, ttc, drac, sf, a, drf, media_variable, colliede), f)
 
     # ---------------
-    init_pos = [[0., 0.], [20, 0.]]  # ego pos, ov pos  v=15: collided,  v=20: no collision
+    init_pos = [[0., 0.], [25, 0.]]  # ego pos, ov pos  v=15: collided,  v=20: no collision
     init_speed = [10, 5]  # km/h
     min_a = -2.5
     ae = np.arange(0,min_a,-0.1).tolist() + [min_a] * 0 + np.arange(min_a, 0, 0.1).tolist() + [0] * 11 + np.arange(0, 2, 0.1).tolist() + [2] * 41
